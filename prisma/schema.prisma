@@ -1,0 +1,36 @@
+// Prisma schema for Agentic Code Review Bot with Audit Trail
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  service   String   // "github" | "slack" | "agent" | "auth"
+  details   String   // JSON string with action-specific details
+  status    String   // "pending" | "success" | "error"
+  error     String?
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([service])
+}
+
+model ConnectedService {
+  id          String   @id @default(cuid())
+  userId      String
+  service     String   // "github" | "slack"
+  connectedAt DateTime @default(now())
+  scopes      String   // comma-separated scopes string
+
+  @@unique([userId, service])
+  @@index([userId])
+}
