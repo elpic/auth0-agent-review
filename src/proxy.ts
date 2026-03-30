@@ -2,16 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth0 } from "@/lib/auth0";
 
 /**
- * Auth0 middleware.
+ * Auth0 proxy handler (Next.js 16+).
  *
- * Protects /dashboard and /audit — unauthenticated users are redirected to the
- * Auth0 login page. All other routes are passed through unchanged.
+ * In Next.js 16 the recommended boundary file is `proxy.ts` (replaces
+ * `middleware.ts` for the Node runtime). `middleware.ts` is kept for Edge-
+ * runtime backward compatibility — both files share the same logic here.
  *
- * The Auth0 SDK also automatically handles:
- *   - Rolling session refresh
- *   - Access token rotation via refresh tokens
+ * Handles:
+ *   - Auth0 SDK routes: /auth/login, /auth/logout, /auth/callback
+ *   - Rolling session refresh on every request
+ *   - Redirects unauthenticated users away from /dashboard and /audit
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const authRes = await auth0.middleware(request);
 
   const { pathname } = request.nextUrl;
@@ -19,9 +21,6 @@ export async function middleware(request: NextRequest) {
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
 
   if (isProtected) {
-    // Check for an active session.
-    // In App Router middleware, getSession() reads from cookies on the
-    // incoming request; pass the request so it works in middleware context.
     const session = await auth0.getSession(request);
 
     if (!session) {
