@@ -50,7 +50,8 @@ The minimum set to get the app running locally:
 AUTH0_SECRET=...
 
 AUTH0_BASE_URL=http://localhost:3000
-AUTH0_ISSUER_BASE_URL=https://your-tenant.us.auth0.com
+# Just the domain, no https:// — e.g. dev-xxxxx.us.auth0.com
+AUTH0_DOMAIN=your-tenant.us.auth0.com
 AUTH0_CLIENT_ID=...
 AUTH0_CLIENT_SECRET=...
 
