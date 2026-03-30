@@ -1,4 +1,4 @@
-# Hacking Guide
+# Contributing Guide
 
 Everything you need to go from zero to running, understand the codebase, and start contributing.
 
@@ -54,7 +54,7 @@ AUTH0_ISSUER_BASE_URL=https://your-tenant.us.auth0.com
 AUTH0_CLIENT_ID=...
 AUTH0_CLIENT_SECRET=...
 
-# Auth0 Token Vault (from Auth0 AI dashboard — requires early access)
+# Auth0 Token Vault endpoint (your Auth0 Management API URL)
 AUTH0_TOKEN_VAULT_URL=https://your-tenant.us.auth0.com/api/v2
 
 # GitHub OAuth App (github.com → Settings → Developer Settings → OAuth Apps)
@@ -72,21 +72,57 @@ OPENAI_API_KEY=sk-...
 DATABASE_URL="file:./dev.db"
 ```
 
-**Don't have Token Vault access yet?** The `getGitHubToken()` and `getSlackToken()` helpers in `src/lib/token-vault.ts` can be stubbed with a hardcoded token during local development. See "Working without Token Vault" below.
-
 ---
 
 ## Auth0 tenant setup (one-time)
 
-1. Go to [manage.auth0.com](https://manage.auth0.com) and create a **Regular Web Application**
-2. Under **Settings**:
-   - Allowed Callback URLs: `http://localhost:3000/auth/callback`
-   - Allowed Logout URLs: `http://localhost:3000`
-3. Under **Advanced Settings → Grant Types**: enable **Refresh Token** + **Refresh Token Rotation**
-4. **Connections → Social**:
-   - Add **GitHub** — use your `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
-   - Add **Slack** — use your `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET`
-5. Request **Token Vault** access at [auth0.com/ai](https://auth0.com/ai) — paste the vault URL into `AUTH0_TOKEN_VAULT_URL`
+### 1. Create the application
+
+1. Go to [manage.auth0.com](https://manage.auth0.com) → **Applications → Applications → Create Application**
+2. Give it a name (e.g. `auth0-agent-review`)
+3. Select **Regular Web Application** → click **Create**
+
+### 2. Configure URLs
+
+Under **Settings**:
+
+| Field | Value |
+|---|---|
+| Allowed Callback URLs | `http://localhost:3000/auth/callback` |
+| Allowed Logout URLs | `http://localhost:3000` |
+| Allowed Web Origins | `http://localhost:3000` |
+
+Click **Save Changes**.
+
+### 3. Enable grant types
+
+Under **Settings → Advanced Settings → Grant Types**, enable:
+
+- **Authorization Code** (should already be on)
+- **Refresh Token**
+- **Token Vault** (needed for Token Vault to work)
+
+### 4. Add social connections
+
+Go to **Authentication → Social → Create Connection**:
+
+- Add **GitHub** — enter your `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
+- Add **Slack** — enter your `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET`
+
+For each connection, go to **Applications** tab inside the connection and enable it for your app.
+
+### 5. Configure Token Vault
+
+Token Vault is **generally available** — no early access request needed.
+
+For each social connection (GitHub, Slack):
+1. Open the connection in **Authentication → Social**
+2. Under **Advanced**, enable **Token Vault**
+3. Save
+
+Then copy your **Management API URL** (`https://your-tenant.us.auth0.com/api/v2`) into `AUTH0_TOKEN_VAULT_URL` in `.env.local`.
+
+> **Note:** Token Vault requires the application to be first-party (`is_first_party: true`), confidential (has a Client Secret), and OIDC conformant. Regular Web Applications created in the dashboard satisfy all three by default.
 
 ---
 
@@ -111,7 +147,7 @@ src/
 │   └── service-connection-card.tsx ← GitHub/Slack connect/disconnect cards
 └── lib/
     ├── agent.ts        ← AI agent loop (Vercel AI SDK + tools)
-    ├── audit.ts        ← logAction() helper — write to AuditLog table
+    ├── audit.ts        ← withAuditLog() helper — wraps actions with audit logging
     ├── auth0.ts        ← Auth0 singleton (auth0.getSession(), auth0.middleware)
     ├── prisma.ts       ← Prisma singleton (prevents connection leaks in dev)
     ├── token-vault.ts  ← getGitHubToken() / getSlackToken() via Token Vault
@@ -127,7 +163,7 @@ prisma/
 ## Key flows to understand
 
 ### 1. Authentication
-`src/proxy.ts` (Next.js middleware) protects `/dashboard` and `/audit`. Any unauthenticated request redirects to Auth0 login. The Auth0 SDK handles the full PKCE flow via the `[auth0]` catch-all route.
+`src/proxy.ts` (Next.js middleware) protects `/dashboard` and `/audit`. Any unauthenticated request redirects to Auth0 login. The Auth0 SDK handles the full PKCE flow via the `[auth0]` catch-all route at `/auth/callback`.
 
 ### 2. Agent trigger
 `POST /api/agent/review` is the entry point. It:
@@ -143,7 +179,7 @@ prisma/
 - `postReviewComment` — posts review back to GitHub (write action, requires step-up)
 
 ### 4. Audit trail
-Every `logAction()` call writes a row to the SQLite `AuditLog` table. The `/audit` page polls `GET /api/audit` every 3 seconds while an agent run is active.
+Every `withAuditLog()` call writes a row to the SQLite `AuditLog` table. The `/audit` page polls `GET /api/audit` every 3 seconds while an agent run is active.
 
 ### 5. Step-up auth
 Before `postReviewComment` executes, the API verifies the session has a recent MFA challenge (`acr` claim). If not, the client is redirected through an Auth0 step-up authorization request.
@@ -167,11 +203,10 @@ npx prisma generate      # Regenerate Prisma client after schema edit
 
 ## Working without Token Vault
 
-If you don't have Token Vault access yet, stub the helpers in `src/lib/token-vault.ts`:
+Stub the helpers in `src/lib/token-vault.ts` to use a personal access token directly:
 
 ```ts
 export async function getGitHubToken(_userId: string, _auth0AccessToken: string): Promise<string> {
-  // Return a personal access token for local dev
   return process.env.DEV_GITHUB_TOKEN!
 }
 
@@ -180,7 +215,7 @@ export async function getSlackToken(_userId: string, _auth0AccessToken: string):
 }
 ```
 
-Add `DEV_GITHUB_TOKEN` and `DEV_SLACK_TOKEN` to `.env.local`. This unblocks local development while you wait for Token Vault early access.
+Add `DEV_GITHUB_TOKEN` and `DEV_SLACK_TOKEN` to `.env.local`.
 
 ---
 
@@ -198,7 +233,6 @@ const myTool = tool({
     param: z.string().describe('What this param is'),
   }),
   execute: async ({ param }) => {
-    // Use withAuditLog() to wrap the action — see src/lib/audit.ts
     return withAuditLog(
       { userId, action: 'my_tool_action', service: 'github', details: { param } },
       async () => {
@@ -249,8 +283,9 @@ model ConnectedService {
 
 ## Branching
 
-- `main` — always deployable
+- `main` — always deployable, branch protected
 - Feature branches: `feat/<short-description>`
 - Bug fixes: `fix/<short-description>`
+- Docs: `docs/<short-description>`
 
 Open a PR against `main`. No force-pushes to `main`.
