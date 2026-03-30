@@ -2,6 +2,7 @@
 node = "24"
 
 [env]
+_.file = ".env.local"
 NODE_ENV = "development"
 
 [tasks.setup]
