@@ -102,27 +102,50 @@ Under **Settings → Advanced Settings → Grant Types**, enable:
 - **Refresh Token**
 - **Token Vault** (needed for Token Vault to work)
 
-### 4. Add social connections
+### 4. Create a GitHub OAuth App
 
-Go to **Authentication → Social → Create Connection**:
+Go to **github.com → Settings → Developer Settings → OAuth Apps → New OAuth App**:
 
-- Add **GitHub** — enter your `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
-- Add **Slack** — enter your `SLACK_CLIENT_ID` and `SLACK_CLIENT_SECRET`
+| Field | Value |
+|---|---|
+| Application name | `auth0-agent-review` (or anything) |
+| Homepage URL | `https://your-tenant.us.auth0.com` |
+| Authorization callback URL | `https://your-tenant.us.auth0.com/login/callback` |
 
-For each connection, go to **Applications** tab inside the connection and enable it for your app.
+Click **Register application**, then click **Generate a new client secret**. Copy the **Client ID** and **Client Secret** into `.env.local`.
 
-### 5. Configure Token Vault
+### 5. Create a Slack App
 
-Token Vault is **generally available** — no early access request needed.
+Go to **api.slack.com/apps → Create New App → From scratch**:
 
-For each social connection (GitHub, Slack):
-1. Open the connection in **Authentication → Social**
-2. Under **Advanced**, enable **Token Vault**
-3. Save
+1. Give it a name and pick a development workspace
+2. Under **OAuth & Permissions → Redirect URLs**, add: `https://your-tenant.us.auth0.com/login/callback`
+3. Under **OAuth & Permissions → User Token Scopes**, add: `channels:history`, `channels:read`, `groups:read`
+4. Under **Basic Information**, copy the **Client ID** and **Client Secret** into `.env.local`
+
+### 6. Add social connections in Auth0
+
+Go to **Authentication → Social → Create Connection** and add GitHub, then Slack.
+
+For each connection:
+
+1. Paste in the **Client ID** and **Client Secret** from the OAuth app you created above
+2. Under **Purpose**, select **"Authentication and Connected Accounts for Token Vault"**
+   - This enables both user login AND Token Vault access — you need both
+3. Go to the **Applications** tab inside the connection and toggle on your app
+4. Click **Save**
+
+### 7. Activate the My Account API (required for Token Vault)
+
+1. Go to **Applications → APIs → Auth0 Management API**
+2. Click the **Machine to Machine Applications** tab
+3. Find your app and toggle it **on**
+4. Under scopes, enable **`openid profile email offline_access`**
+5. Click **Update**
 
 Then copy your **Management API URL** (`https://your-tenant.us.auth0.com/api/v2`) into `AUTH0_TOKEN_VAULT_URL` in `.env.local`.
 
-> **Note:** Token Vault requires the application to be first-party (`is_first_party: true`), confidential (has a Client Secret), and OIDC conformant. Regular Web Applications created in the dashboard satisfy all three by default.
+> **Free tier note:** The free plan allows 2 social connections and 2 Token Vault connected apps — exactly enough for GitHub + Slack. No upgrade needed.
 
 ---
 
