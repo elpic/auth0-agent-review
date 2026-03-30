@@ -1,0 +1,45 @@
+[tools]
+node = "24"
+
+[env]
+_.file = ".env.local"
+NODE_ENV = "development"
+
+[tasks.setup]
+description = "Bootstrap project: install deps + generate Prisma client"
+run = """
+npm install
+npx prisma generate
+"""
+
+[tasks.dev]
+description = "Start Next.js dev server"
+run = "npx next dev"
+
+[tasks.build]
+description = "Build for production"
+run = "npx next build"
+
+[tasks.start]
+description = "Start production server"
+run = "npx next start"
+
+[tasks.lint]
+description = "Run ESLint"
+run = "npx eslint"
+
+[tasks."prisma:studio"]
+description = "Open Prisma Studio (database browser)"
+run = "npx prisma studio"
+
+[tasks."prisma:migrate"]
+description = "Run Prisma migrations (dev)"
+run = "npx prisma migrate dev"
+
+[tasks."prisma:generate"]
+description = "Generate Prisma client"
+run = "npx prisma generate"
+
+[tasks."prisma:push"]
+description = "Push schema to database without migration"
+run = "npx prisma db push"

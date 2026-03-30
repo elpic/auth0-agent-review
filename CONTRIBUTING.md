@@ -23,18 +23,22 @@ Everything you need to go from zero to running, understand the codebase, and sta
 git clone git@github.com:elpic/auth0-agent-review.git
 cd auth0-agent-review
 
-# 2. Install dependencies
-npm install
+# 2. Install mise (if you don't have it)
+curl https://mise.run | sh
 
-# 3. Set up environment variables
+# 3. Install correct Node version + project deps
+mise install
+mise run setup
+
+# 4. Set up environment variables
 cp .env.local.example .env.local
 # → Fill in all values (see "Environment variables" section below)
 
-# 4. Run the database migration
-npx prisma migrate dev
+# 5. Run the database migration
+mise run prisma:migrate
 
-# 5. Start the dev server
-npm run dev
+# 6. Start the dev server
+mise run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -212,16 +216,21 @@ Before `postReviewComment` executes, the API verifies the session has a recent M
 
 ## Useful commands
 
-```bash
-npm run dev              # Start dev server (http://localhost:3000)
-npm run build            # Production build
-npm run lint             # ESLint
+This project uses [`mise`](https://mise.jdx.dev/) as the primary task runner. Run `mise install` first to get the correct Node version.
 
-npx prisma studio        # Database GUI (http://localhost:5555)
-npx prisma migrate dev   # Apply schema changes + regenerate client
-npx prisma db push       # Push schema without creating a migration (prototyping)
-npx prisma generate      # Regenerate Prisma client after schema edit
+```bash
+mise run setup              # First-time: npm install + generate Prisma client
+mise run dev                # Start dev server (http://localhost:3000)
+mise run build              # Production build
+mise run lint               # ESLint
+
+mise run prisma:studio      # Database GUI (http://localhost:5555)
+mise run prisma:migrate     # Apply schema changes + regenerate client
+mise run prisma:push        # Push schema without creating a migration (prototyping)
+mise run prisma:generate    # Regenerate Prisma client after schema edit
 ```
+
+> `package.json` scripts (`npm run dev` etc.) still work and are used by Vercel CI. Use `mise run` locally.
 
 ---
 
