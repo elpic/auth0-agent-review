@@ -1,5 +1,0 @@
-[tools]
-node = "24"
-
-[env]
-NODE_ENV = "development"
