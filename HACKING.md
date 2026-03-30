@@ -133,8 +133,8 @@ prisma/
 `POST /api/agent/review` is the entry point. It:
 1. Validates the session (`auth0.getSession()`)
 2. Gets GitHub + Slack tokens from Token Vault
-3. Calls `runReview()` from `src/lib/agent.ts`
-4. Logs every step to `AuditLog` via `logAction()`
+3. Calls `reviewPullRequest()` from `src/lib/agent.ts`
+4. Logs every step to `AuditLog` via `withAuditLog()`
 
 ### 3. Agent loop
 `src/lib/agent.ts` uses Vercel AI SDK `generateText` with three tools:
@@ -170,12 +170,12 @@ npx prisma generate      # Regenerate Prisma client after schema edit
 If you don't have Token Vault access yet, stub the helpers in `src/lib/token-vault.ts`:
 
 ```ts
-export async function getGitHubToken(_userId: string): Promise<string> {
+export async function getGitHubToken(_userId: string, _auth0AccessToken: string): Promise<string> {
   // Return a personal access token for local dev
   return process.env.DEV_GITHUB_TOKEN!
 }
 
-export async function getSlackToken(_userId: string): Promise<string> {
+export async function getSlackToken(_userId: string, _auth0AccessToken: string): Promise<string> {
   return process.env.DEV_SLACK_TOKEN!
 }
 ```
@@ -194,14 +194,18 @@ import { z } from 'zod'
 
 const myTool = tool({
   description: 'What this tool does',
-  parameters: z.object({
+  inputSchema: z.object({
     param: z.string().describe('What this param is'),
   }),
-  execute: async ({ param }, { userId }) => {
-    await logAction(userId, 'my_tool_action', 'github', 'pending')
-    // ... do the work
-    await logAction(userId, 'my_tool_action', 'github', 'success')
-    return result
+  execute: async ({ param }) => {
+    // Use withAuditLog() to wrap the action — see src/lib/audit.ts
+    return withAuditLog(
+      { userId, action: 'my_tool_action', service: 'github', details: { param } },
+      async () => {
+        // ... do the work
+        return result
+      }
+    )
   },
 })
 ```
@@ -220,20 +224,24 @@ model AuditLog {
   action    String           // e.g. "fetch_pr_details", "post_review_comment"
   service   String           // "github" | "slack" | "agent" | "auth"
   status    String           // "pending" | "success" | "error"
-  details   String?          // JSON blob
+  details   String           // JSON string with action-specific details
   error     String?
-  createdAt DateTime @default(now())
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+  @@index([timestamp])
+  @@index([service])
 }
 
 model ConnectedService {
-  id        String   @id @default(cuid())
-  userId    String
-  service   String           // "github" | "slack"
-  scope     String?          // OAuth scopes granted
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  userId      String
+  service     String           // "github" | "slack"
+  scopes      String           // comma-separated scopes string
+  connectedAt DateTime @default(now())
 
   @@unique([userId, service])
+  @@index([userId])
 }
 ```
 
