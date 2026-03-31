@@ -16,10 +16,10 @@ export default async function DashboardPage() {
     redirect("/auth/login?returnTo=/dashboard");
   }
 
-  const userId = session.user.sub;
-
-  // Sync Auth0 linked identities into the ConnectedService table
-  await syncConnections(session.user);
+  // Use email as the stable user identifier — session.user.sub changes with
+  // each OAuth provider (github|xxx, oauth2|slack|xxx, etc.) but email is
+  // consistent across all linked accounts.
+  const userId = session.user.email as string;
 
   // Fetch connected services for this user
   const services = await prisma.connectedService.findMany({

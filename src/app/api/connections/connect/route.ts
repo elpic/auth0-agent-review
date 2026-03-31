@@ -31,9 +31,8 @@ export async function GET(req: NextRequest) {
 
   const callbackUrl = new URL("/api/connections/callback", req.url);
   callbackUrl.searchParams.set("service", service);
-  // Pass the original userId so the callback can write the record under the
-  // correct user — the OAuth flow creates a new session with a different sub.
-  callbackUrl.searchParams.set("userId", session.user.sub);
+  // Pass email as the stable identifier — sub changes per OAuth provider.
+  callbackUrl.searchParams.set("userId", session.user.email as string);
 
   const loginUrl = new URL("/auth/login", req.url);
   loginUrl.searchParams.set("connection", CONNECTION_MAP[service]);

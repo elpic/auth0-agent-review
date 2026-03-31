@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   const offset = parseInt(searchParams.get("offset") ?? "0");
   const service = searchParams.get("service") as AuditService | null;
 
-  const entries = await getAuditLogs(session.user.sub, {
+  const entries = await getAuditLogs(session.user.email as string, {
     limit,
     offset,
     service: service ?? undefined,
