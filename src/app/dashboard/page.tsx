@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth0 } from "@/lib/auth0";
 import { prisma } from "@/lib/prisma";
+import { syncConnections } from "@/lib/sync-connections";
 import { Navbar } from "@/components/navbar";
 import { ServiceConnectionCard } from "@/components/service-connection-card";
 import { ReviewForm } from "@/components/review-form";
@@ -16,6 +17,9 @@ export default async function DashboardPage() {
   }
 
   const userId = session.user.sub;
+
+  // Sync Auth0 linked identities into the ConnectedService table
+  await syncConnections(session.user);
 
   // Fetch connected services for this user
   const services = await prisma.connectedService.findMany({
