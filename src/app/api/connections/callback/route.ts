@@ -18,12 +18,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
+  // Use the original userId passed from the connect route — the OAuth flow
+  // creates a new session with a different sub (e.g. github|xxx vs auth0|xxx).
+  const originalUserId = req.nextUrl.searchParams.get("userId");
+
   const session = await auth0.getSession(req);
   if (!session) {
     return NextResponse.redirect(new URL("/auth/login?returnTo=/dashboard", req.url));
   }
 
-  const userId = session.user.sub;
+  // Prefer the original userId; fall back to current session sub if missing.
+  const userId = originalUserId ?? session.user.sub;
 
   await prisma.connectedService.upsert({
     where: { userId_service: { userId, service } },
