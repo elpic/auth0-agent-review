@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth0 } from "@/lib/auth0";
-import { prisma } from "@/lib/prisma";
-
-const VALID_SERVICES = ["github", "slack"] as const;
-type Service = (typeof VALID_SERVICES)[number];
-
-const CONNECTION_MAP: Record<Service, string> = {
-  github: "github",
-  slack: "sign-in-with-slack",
-};
+import { VALID_SERVICES, CONNECTION_MAP, type Service } from "@/lib/connections";
 
 /**
  * GET /api/connections/connect?service=github
