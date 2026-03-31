@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const userId = session.user.sub;
+  // Use email as stable identifier — sub changes per OAuth provider.
+  const userId = session.user.email as string;
 
   let body: { repo?: string; prNumber?: number; slackChannelId?: string };
   try {

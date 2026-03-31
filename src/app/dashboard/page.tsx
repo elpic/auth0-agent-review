@@ -15,7 +15,10 @@ export default async function DashboardPage() {
     redirect("/auth/login?returnTo=/dashboard");
   }
 
-  const userId = session.user.sub;
+  // Use email as the stable user identifier — session.user.sub changes with
+  // each OAuth provider (github|xxx, oauth2|slack|xxx, etc.) but email is
+  // consistent across all linked accounts.
+  const userId = session.user.email as string;
 
   // Fetch connected services for this user
   const services = await prisma.connectedService.findMany({
@@ -57,7 +60,7 @@ export default async function DashboardPage() {
                   ? formatDateTime(githubService.connectedAt)
                   : undefined
               }
-              connectHref="/auth/login?connection=github&returnTo=/dashboard"
+              connectHref="/api/connections/connect?service=github"
             />
             <ServiceConnectionCard
               name="Slack"
@@ -70,7 +73,7 @@ export default async function DashboardPage() {
                   ? formatDateTime(slackService.connectedAt)
                   : undefined
               }
-              connectHref="/auth/login?connection=slack&returnTo=/dashboard"
+              connectHref="/api/connections/connect?service=slack"
             />
           </div>
 
