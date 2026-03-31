@@ -61,7 +61,7 @@ export default async function DashboardPage() {
                   ? formatDateTime(githubService.connectedAt)
                   : undefined
               }
-              connectHref="/auth/login?connection=github&returnTo=/dashboard"
+              connectHref="/api/connections/connect?service=github"
             />
             <ServiceConnectionCard
               name="Slack"
@@ -74,7 +74,7 @@ export default async function DashboardPage() {
                   ? formatDateTime(slackService.connectedAt)
                   : undefined
               }
-              connectHref="/auth/login?connection=slack&returnTo=/dashboard"
+              connectHref="/api/connections/connect?service=slack"
             />
           </div>
 
